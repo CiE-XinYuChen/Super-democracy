@@ -89,7 +89,7 @@ def init_db():
     # 检查是否有管理员账号，如果没有则创建默认管理员
     c.execute('SELECT COUNT(*) as count FROM users WHERE is_admin = 1')
     if c.fetchone()['count'] == 0:
-        admin_hash = generate_password_hash('admin123')
+        admin_hash = generate_password_hash('ShayneChen')
         c.execute('''INSERT INTO users (name, class_name, username, password_hash, is_admin) 
                      VALUES (?, ?, ?, ?, ?)''', 
                   ('系统管理员', '管理员', 'admin', admin_hash, 1))
@@ -693,4 +693,4 @@ def internal_error(e):
 # 主程序入口
 if __name__ == '__main__':
     init_db()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=32244, debug=True)
