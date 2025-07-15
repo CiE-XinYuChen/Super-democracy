@@ -14,11 +14,14 @@
         {% for position in positions %}
         <div class="vote-card" id="position-{{ position.id }}">
             <div class="vote-header">
-                <h3>{{ position.position_name }}</h3>
-                <p class="member-name">
-                    <i class="fas fa-user"></i>
-                    {{ position.member_name }}
-                </p>
+                <div class="position-number">{{ position.sort_order }}</div>
+                <div class="position-info">
+                    <h3>{{ position.position_name }}</h3>
+                    <p class="member-name">
+                        <i class="fas fa-user"></i>
+                        {{ position.member_name }}
+                    </p>
+                </div>
             </div>
             
             <div class="vote-body">

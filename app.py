@@ -63,9 +63,18 @@ def init_db():
         class_name TEXT NOT NULL,
         position_name TEXT NOT NULL,
         member_name TEXT NOT NULL,
+        sort_order INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(class_name, position_name)
     )''')
+    
+    # 检查是否需要添加 sort_order 列（用于已存在的数据库）
+    c.execute("PRAGMA table_info(positions)")
+    columns = [col[1] for col in c.fetchall()]
+    if 'sort_order' not in columns:
+        c.execute('ALTER TABLE positions ADD COLUMN sort_order INTEGER DEFAULT 0')
+        # 为现有数据设置默认排序
+        c.execute('''UPDATE positions SET sort_order = id WHERE sort_order = 0''')
     
     # 投票记录表
     c.execute('''CREATE TABLE IF NOT EXISTS votes (
@@ -89,7 +98,7 @@ def init_db():
     # 检查是否有管理员账号，如果没有则创建默认管理员
     c.execute('SELECT COUNT(*) as count FROM users WHERE is_admin = 1')
     if c.fetchone()['count'] == 0:
-        admin_hash = generate_password_hash('ShayneChen')
+        admin_hash = generate_password_hash('admin123')
         c.execute('''INSERT INTO users (name, class_name, username, password_hash, is_admin) 
                      VALUES (?, ?, ?, ?, ?)''', 
                   ('系统管理员', '管理员', 'admin', admin_hash, 1))
@@ -207,13 +216,13 @@ def vote():
     conn = get_db()
     c = conn.cursor()
     
-    # 获取用户班级的所有班委岗位
+    # 获取用户班级的所有班委岗位，按序号排序
     c.execute('''SELECT p.*, 
                  CASE WHEN v.id IS NOT NULL THEN v.is_satisfied ELSE NULL END as user_vote
                  FROM positions p
                  LEFT JOIN votes v ON p.id = v.position_id AND v.user_id = ?
                  WHERE p.class_name = ?
-                 ORDER BY p.position_name''', 
+                 ORDER BY p.sort_order, p.id''', 
               (user_info['id'], user_info['class_name']))
     positions = c.fetchall()
     
@@ -448,12 +457,12 @@ def admin_positions():
     c.execute('SELECT DISTINCT class_name FROM positions ORDER BY class_name')
     classes = [row['class_name'] for row in c.fetchall()]
     
-    # 获取岗位列表
+    # 获取岗位列表，按序号排序
     if class_filter:
-        c.execute('SELECT * FROM positions WHERE class_name = ? ORDER BY position_name', 
+        c.execute('SELECT * FROM positions WHERE class_name = ? ORDER BY sort_order, id', 
                   (class_filter,))
     else:
-        c.execute('SELECT * FROM positions ORDER BY class_name, position_name')
+        c.execute('SELECT * FROM positions ORDER BY class_name, sort_order, id')
     
     positions = c.fetchall()
     conn.close()
@@ -477,9 +486,13 @@ def admin_add_position():
     c = conn.cursor()
     
     try:
-        c.execute('''INSERT INTO positions (class_name, position_name, member_name) 
-                     VALUES (?, ?, ?)''', 
-                  (class_name, position_name, member_name))
+        # 获取该班级的最大序号
+        c.execute('SELECT MAX(sort_order) as max_order FROM positions WHERE class_name = ?', (class_name,))
+        max_order = c.fetchone()['max_order'] or 0
+        
+        c.execute('''INSERT INTO positions (class_name, position_name, member_name, sort_order) 
+                     VALUES (?, ?, ?, ?)''', 
+                  (class_name, position_name, member_name, max_order + 1))
         conn.commit()
         flash('岗位添加成功', 'success')
     except sqlite3.IntegrityError:
@@ -513,6 +526,82 @@ def admin_delete_position(position_id):
         flash(f'删除失败：{str(e)}', 'error')
     finally:
         conn.close()
+    
+    return redirect(url_for('admin_positions'))
+
+@app.route('/admin/positions/import', methods=['POST'])
+@admin_required
+def admin_import_positions():
+    """批量导入岗位"""
+    if 'file' not in request.files:
+        flash('请选择文件', 'error')
+        return redirect(url_for('admin_positions'))
+    
+    file = request.files['file']
+    if file.filename == '':
+        flash('请选择文件', 'error')
+        return redirect(url_for('admin_positions'))
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        try:
+            # 读取 Excel 文件
+            workbook = openpyxl.load_workbook(filepath)
+            sheet = workbook.active
+            
+            conn = get_db()
+            c = conn.cursor()
+            
+            success_count = 0
+            error_count = 0
+            
+            # 按班级分组处理，确保同一班级的序号连续
+            class_positions = {}
+            
+            # 跳过标题行，收集数据
+            for row in sheet.iter_rows(min_row=2, values_only=True):
+                if len(row) >= 3 and all(row[:3]):  # 确保有足够的列且不为空
+                    class_name, position_name, member_name = row[:3]
+                    class_name = str(class_name).strip()
+                    position_name = str(position_name).strip()
+                    member_name = str(member_name).strip()
+                    
+                    if class_name not in class_positions:
+                        class_positions[class_name] = []
+                    class_positions[class_name].append((position_name, member_name))
+            
+            # 按班级批量插入
+            for class_name, positions in class_positions.items():
+                # 获取该班级当前的最大序号
+                c.execute('SELECT MAX(sort_order) as max_order FROM positions WHERE class_name = ?', (class_name,))
+                max_order = c.fetchone()['max_order'] or 0
+                
+                for i, (position_name, member_name) in enumerate(positions):
+                    try:
+                        c.execute('''INSERT INTO positions (class_name, position_name, member_name, sort_order) 
+                                     VALUES (?, ?, ?, ?)''', 
+                                  (class_name, position_name, member_name, max_order + i + 1))
+                        success_count += 1
+                    except sqlite3.IntegrityError:
+                        error_count += 1
+                        continue
+            
+            conn.commit()
+            conn.close()
+            
+            # 删除上传的文件
+            os.remove(filepath)
+            
+            flash(f'导入完成：成功 {success_count} 条，失败 {error_count} 条', 'success')
+        except Exception as e:
+            flash(f'导入失败：{str(e)}', 'error')
+            if os.path.exists(filepath):
+                os.remove(filepath)
+    else:
+        flash('不支持的文件格式', 'error')
     
     return redirect(url_for('admin_positions'))
 
