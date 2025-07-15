@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}岗位管理 - Super-Democracy{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-cog"></i>
+            管理后台
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-item">
+                <i class="fas fa-tachometer-alt"></i>
+                仪表板
+            </a>
+            <a href="{{ url_for('admin_users') }}" class="nav-item">
+                <i class="fas fa-users"></i>
+                用户管理
+            </a>
+            <a href="{{ url_for('admin_positions') }}" class="nav-item active">
+                <i class="fas fa-user-tie"></i>
+                岗位管理
+            </a>
+            <a href="{{ url_for('admin_statistics') }}" class="nav-item">
+                <i class="fas fa-chart-bar"></i>
+                投票统计
+            </a>
+        </nav>
+    </div>
+    
+    <div class="admin-content">
+        <div class="content-header">
+            <h1>岗位管理</h1>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="showAddPositionModal()">
+                    <i class="fas fa-plus"></i>
+                    添加岗位
+                </button>
+            </div>
+        </div>
+        
+        <!-- 班级筛选 -->
+        <div class="filter-bar">
+            <label>班级筛选：</label>
+            <select onchange="filterByClass(this.value)" class="form-control inline">
+                <option value="">全部班级</option>
+                {% for class_name in classes %}
+                <option value="{{ class_name }}" {% if current_class == class_name %}selected{% endif %}>
+                    {{ class_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <!-- 岗位列表 -->
+        <div class="data-table">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>班级</th>
+                        <th>岗位名称</th>
+                        <th>班委姓名</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for position in positions %}
+                    <tr>
+                        <td>{{ position.class_name }}</td>
+                        <td>{{ position.position_name }}</td>
+                        <td>{{ position.member_name }}</td>
+                        <td>{{ position.created_at[:10] }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" 
+                                    onclick="deletePosition({{ position.id }}, '{{ position.position_name }}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center">暂无岗位数据</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 添加岗位模态框 -->
+<div id="addPositionModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>添加岗位</h3>
+            <span class="close" onclick="closeModal('addPositionModal')">&times;</span>
+        </div>
+        <form method="POST" action="{{ url_for('admin_add_position') }}">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>班级</label>
+                    <input type="text" name="class_name" class="form-control" 
+                           placeholder="如：2021级计算机1班" required>
+                </div>
+                <div class="form-group">
+                    <label>岗位名称</label>
+                    <input type="text" name="position_name" class="form-control" 
+                           placeholder="如：班长、团支书、学习委员" required>
+                </div>
+                <div class="form-group">
+                    <label>班委姓名</label>
+                    <input type="text" name="member_name" class="form-control" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addPositionModal')">取消</button>
+                <button type="submit" class="btn btn-primary">添加</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showAddPositionModal() {
+    document.getElementById('addPositionModal').style.display = 'block';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+function filterByClass(className) {
+    window.location.href = '{{ url_for("admin_positions") }}' + (className ? '?class=' + encodeURIComponent(className) : '');
+}
+
+function deletePosition(positionId, positionName) {
+    if (confirm(`确定要删除岗位"${positionName}"吗？相关投票记录也将被删除。`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/admin/positions/${positionId}/delete`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// 点击模态框外部关闭
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

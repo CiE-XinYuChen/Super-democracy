@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}页面未找到 - Super-Democracy{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="error-page">
+        <div class="error-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h1>404</h1>
+        <h2>页面未找到</h2>
+        <p>您访问的页面不存在，可能已被删除或移动。</p>
+        <div class="error-actions">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                <i class="fas fa-home"></i>
+                返回首页
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-page {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.error-icon {
+    font-size: 64px;
+    color: var(--warning-color);
+    margin-bottom: 20px;
+}
+
+.error-page h1 {
+    font-size: 72px;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-bottom: 10px;
+}
+
+.error-page h2 {
+    font-size: 24px;
+    color: var(--gray-700);
+    margin-bottom: 20px;
+}
+
+.error-page p {
+    color: var(--gray-600);
+    margin-bottom: 30px;
+}
+
+.error-actions {
+    margin-top: 30px;
+}
+</style>
+{% endblock %}

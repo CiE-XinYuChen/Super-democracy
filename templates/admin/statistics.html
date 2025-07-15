@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}投票统计 - Super-Democracy{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-cog"></i>
+            管理后台
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-item">
+                <i class="fas fa-tachometer-alt"></i>
+                仪表板
+            </a>
+            <a href="{{ url_for('admin_users') }}" class="nav-item">
+                <i class="fas fa-users"></i>
+                用户管理
+            </a>
+            <a href="{{ url_for('admin_positions') }}" class="nav-item">
+                <i class="fas fa-user-tie"></i>
+                岗位管理
+            </a>
+            <a href="{{ url_for('admin_statistics') }}" class="nav-item active">
+                <i class="fas fa-chart-bar"></i>
+                投票统计
+            </a>
+        </nav>
+    </div>
+    
+    <div class="admin-content">
+        <div class="content-header">
+            <h1>投票统计</h1>
+            <div class="header-actions">
+                <button class="btn btn-success" onclick="exportStatistics()">
+                    <i class="fas fa-download"></i>
+                    导出报表
+                </button>
+            </div>
+        </div>
+        
+        <!-- 班级筛选 -->
+        <div class="filter-bar">
+            <label>班级筛选：</label>
+            <select onchange="filterByClass(this.value)" class="form-control inline">
+                <option value="">全部班级</option>
+                {% for class_name in classes %}
+                <option value="{{ class_name }}" {% if current_class == class_name %}selected{% endif %}>
+                    {{ class_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <!-- 统计列表 -->
+        <div class="statistics-container">
+            {% for stat in statistics %}
+            <div class="stat-item">
+                <div class="stat-header">
+                    <h3>{{ stat.position_name }}</h3>
+                    <p class="stat-info">
+                        <span class="info-item">
+                            <i class="fas fa-school"></i>
+                            {{ stat.class_name }}
+                        </span>
+                        <span class="info-item">
+                            <i class="fas fa-user"></i>
+                            {{ stat.member_name }}
+                        </span>
+                    </p>
+                </div>
+                
+                <div class="stat-body">
+                    <div class="progress-section">
+                        <div class="progress-label">
+                            <span>满意度</span>
+                            <span class="progress-value">{{ "%.1f"|format(stat.satisfaction_rate) }}%</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar {% if stat.satisfaction_rate >= 80 %}success{% elif stat.satisfaction_rate >= 60 %}warning{% else %}danger{% endif %}" 
+                                 style="width: {{ stat.satisfaction_rate }}%"></div>
+                        </div>
+                        <p class="progress-detail">
+                            满意 {{ stat.satisfied_votes }} 票 / 总计 {{ stat.total_votes }} 票
+                        </p>
+                    </div>
+                    
+                    <div class="progress-section">
+                        <div class="progress-label">
+                            <span>参与率</span>
+                            <span class="progress-value">{{ "%.1f"|format(stat.participation_rate) }}%</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar info" 
+                                 style="width: {{ stat.participation_rate }}%"></div>
+                        </div>
+                        <p class="progress-detail">
+                            已投票 {{ stat.total_votes }} 人 / 班级总人数 {{ stat.class_users }} 人
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-chart-bar fa-3x"></i>
+                <h3>暂无统计数据</h3>
+                <p>还没有投票记录</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+function filterByClass(className) {
+    window.location.href = '{{ url_for("admin_statistics") }}' + (className ? '?class=' + encodeURIComponent(className) : '');
+}
+
+function exportStatistics() {
+    const currentClass = new URLSearchParams(window.location.search).get('class') || '';
+    let exportUrl = '{{ url_for("export_statistics") }}';
+    if (currentClass) {
+        exportUrl += '?class=' + encodeURIComponent(currentClass);
+    }
+    window.location.href = exportUrl;
+}
+</script>
+{% endblock %}

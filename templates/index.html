@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}投票 - Super-Democracy{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>班委满意度投票</h1>
+        <p class="lead">{{ user_info.class_name }} - 请对以下班委进行评价</p>
+    </div>
+
+    {% if positions %}
+    <div class="vote-container">
+        {% for position in positions %}
+        <div class="vote-card" id="position-{{ position.id }}">
+            <div class="vote-header">
+                <h3>{{ position.position_name }}</h3>
+                <p class="member-name">
+                    <i class="fas fa-user"></i>
+                    {{ position.member_name }}
+                </p>
+            </div>
+            
+            <div class="vote-body">
+                {% if position.user_vote is not none %}
+                    <div class="vote-result">
+                        <i class="fas fa-check-circle"></i>
+                        您已投票：
+                        {% if position.user_vote == 1 %}
+                            <span class="text-success">满意</span>
+                        {% else %}
+                            <span class="text-danger">不满意</span>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="vote-actions">
+                        <button class="btn btn-success vote-btn" 
+                                onclick="submitVote({{ position.id }}, 1)">
+                            <i class="fas fa-thumbs-up"></i>
+                            满意
+                        </button>
+                        <button class="btn btn-danger vote-btn" 
+                                onclick="submitVote({{ position.id }}, 0)">
+                            <i class="fas fa-thumbs-down"></i>
+                            不满意
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="vote-summary">
+        <div class="summary-card">
+            <i class="fas fa-chart-pie"></i>
+            <p>您已完成 <strong class="voted-count">{{ positions|selectattr("user_vote", "ne", none)|list|length }}</strong> / {{ positions|length }} 项投票</p>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-inbox fa-3x"></i>
+        <h3>暂无投票项目</h3>
+        <p>您所在班级暂未设置班委岗位</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function submitVote(positionId, isSatisfied) {
+    if (!confirm(isSatisfied ? '确定投"满意"票吗？' : '确定投"不满意"票吗？')) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('position_id', positionId);
+    formData.append('is_satisfied', isSatisfied);
+    
+    fetch('/submit_vote', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 更新界面
+            const card = document.getElementById('position-' + positionId);
+            const voteBody = card.querySelector('.vote-body');
+            voteBody.innerHTML = `
+                <div class="vote-result">
+                    <i class="fas fa-check-circle"></i>
+                    您已投票：
+                    ${isSatisfied ? '<span class="text-success">满意</span>' : '<span class="text-danger">不满意</span>'}
+                </div>
+            `;
+            
+            // 更新计数
+            updateVoteCount();
+            
+            // 显示成功消息
+            showMessage(data.message, 'success');
+        } else {
+            showMessage(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showMessage('投票失败，请重试', 'error');
+    });
+}
+
+function updateVoteCount() {
+    const votedCards = document.querySelectorAll('.vote-result').length;
+    const votedCount = document.querySelector('.voted-count');
+    if (votedCount) {
+        votedCount.textContent = votedCards;
+    }
+}
+
+function showMessage(message, type) {
+    const flashDiv = document.createElement('div');
+    flashDiv.className = `alert alert-${type}`;
+    flashDiv.innerHTML = `
+        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+        ${message}
+        <button class="alert-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    const container = document.querySelector('.flash-messages') || (() => {
+        const div = document.createElement('div');
+        div.className = 'flash-messages';
+        document.querySelector('nav').after(div);
+        return div;
+    })();
+    
+    container.appendChild(flashDiv);
+    
+    // 自动消失
+    setTimeout(() => {
+        flashDiv.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}管理后台 - Super-Democracy{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-cog"></i>
+            管理后台
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-item active">
+                <i class="fas fa-tachometer-alt"></i>
+                仪表板
+            </a>
+            <a href="{{ url_for('admin_users') }}" class="nav-item">
+                <i class="fas fa-users"></i>
+                用户管理
+            </a>
+            <a href="{{ url_for('admin_positions') }}" class="nav-item">
+                <i class="fas fa-user-tie"></i>
+                岗位管理
+            </a>
+            <a href="{{ url_for('admin_statistics') }}" class="nav-item">
+                <i class="fas fa-chart-bar"></i>
+                投票统计
+            </a>
+        </nav>
+    </div>
+    
+    <div class="admin-content">
+        <div class="content-header">
+            <h1>仪表板</h1>
+            <p>系统数据概览</p>
+        </div>
+        
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #e3f2fd;">
+                    <i class="fas fa-users" style="color: #1976d2;"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.user_count }}</h3>
+                    <p>注册用户</p>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #f3e5f5;">
+                    <i class="fas fa-school" style="color: #7b1fa2;"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.class_count }}</h3>
+                    <p>班级数量</p>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #e8f5e9;">
+                    <i class="fas fa-user-tie" style="color: #388e3c;"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.position_count }}</h3>
+                    <p>班委岗位</p>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #fff3e0;">
+                    <i class="fas fa-percentage" style="color: #f57c00;"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.vote_rate }}%</h3>
+                    <p>参与率</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="dashboard-actions">
+            <h2>快速操作</h2>
+            <div class="action-cards">
+                <a href="{{ url_for('admin_users') }}" class="action-card">
+                    <i class="fas fa-user-plus"></i>
+                    <span>添加用户</span>
+                </a>
+                <a href="{{ url_for('admin_positions') }}" class="action-card">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>添加岗位</span>
+                </a>
+                <a href="{{ url_for('admin_statistics') }}" class="action-card">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>查看统计</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
